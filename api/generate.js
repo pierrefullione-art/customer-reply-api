@@ -5,22 +5,20 @@ const client = new OpenAI({
 });
 
 export default async function handler(req, res) {
-  // ✅ CORS headers (allow requests from Carrd and other sites)
+  // CORS (allow Carrd)
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // ✅ Handle preflight request
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  // Only allow POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { message } = req.body;
+  const { message, business_info } = req.body;
 
   if (!message) {
     return res.status(400).json({ error: "No message provided" });
@@ -33,9 +31,18 @@ export default async function handler(req, res) {
         {
           role: "system",
           content:
-            "You are a professional customer service assistant for small businesses. Write a clear, polite, and human-sounding reply. Do not mention AI."
+            "You are a customer service assistant for ONE specific business.\n" +
+            "You MUST base answers on the Business Info provided.\n" +
+            "If Business Info does not contain the needed detail (hours/policy/pricing/warranty/etc), DO NOT guess.\n" +
+            "Instead ask 1–2 clarifying questions OR suggest escalating to the business.\n" +
+            "Write a clear, polite, human-sounding reply.\n" +
+            "Never mention AI."
         },
-        { role: "user", content: message }
+        {
+          role: "user",
+          content:
+            `Business Info:\n${business_info || "(none provided)"}\n\nCustomer message:\n${message}`
+        }
       ]
     });
 
